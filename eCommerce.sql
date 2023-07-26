@@ -1,8 +1,8 @@
--- Created at: 2023-07-18
--- Modified at: 
+-- Project: eCommerce
 -- Model: eCommerce
 -- Version: 1.0
--- Project: eCommerce
+-- Created at: 2023-07-21
+-- Modified at: 
 -- Author: Marcelo Tiago Lopes Shimizu
 
 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
@@ -15,12 +15,11 @@ use ecommerce;
 
 -- Creates table client_address_type
 CREATE TABLE IF NOT EXISTS `ecommerce`.`client_address_type` (
-	`id` INT NOT NULL,
-	`client_address_type_name` VARCHAR(50) NOT NULL,
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`client_address_type_name` VARCHAR(50) NOT NULL UNIQUE,
 	`client_address_type_description` VARCHAR(255) NULL DEFAULT NULL,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`))
+	`modified_at` DATETIME NULL DEFAULT NULL)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -57,12 +56,11 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table client_phone_type
 CREATE TABLE IF NOT EXISTS `ecommerce`.`client_phone_type` (
-	`id` INT NOT NULL,
-	`client_phone_type_name` VARCHAR(50) NOT NULL,
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`client_phone_type_name` VARCHAR(50) NOT NULL UNIQUE,
 	`client_phone_type_description` VARCHAR(255) NULL DEFAULT NULL,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`))
+	`modified_at` DATETIME NULL DEFAULT NULL)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -77,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`client_phone` (
 	`modified_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`client_id`, `client_phone_type_id`),
 	INDEX `fk_client_phone_client_phone_type_idx` (`client_phone_type_id` ASC) VISIBLE,
-	CONSTRAINT `fk_client_phone_client_phone_type`
+	CONSTRAINT `fk_client_phone_type`
 		FOREIGN KEY (`client_phone_type_id`)
 		REFERENCES `ecommerce`.`client_phone_type` (`id`)
 		ON DELETE NO ACTION
@@ -92,28 +90,27 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table clients
 CREATE TABLE IF NOT EXISTS `ecommerce`.`clients` (
-	`id` INT NOT NULL,
+	`id` INT UNIQUE AUTO_INCREMENT PRIMARY KEY,
 	`client_active` TINYINT NOT NULL,
 	`client_first_name` VARCHAR(50) NOT NULL,
 	`client_middle_name` VARCHAR(50) NULL DEFAULT NULL,
 	`client_last_name` VARCHAR(50) NOT NULL,
-	`client_birth_date` DATETIME NOT NULL,
+	`client_birth_date` DATE NOT NULL,
 	`client_email` VARCHAR(500) NOT NULL,
 	`client_email_verified` TINYINT NULL DEFAULT NULL,
 	`client_registration_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `client_first_name`, `client_last_name`, `client_birth_date`, `client_email`))
+    UNIQUE KEY (`client_first_name`, `client_last_name`, `client_birth_date`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
--- Creates table user_roles
+-- Creates table user_role_type
 CREATE TABLE IF NOT EXISTS `ecommerce`.`user_role_type` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`user_role_name` VARCHAR(50) NOT NULL,
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`user_role_name` VARCHAR(50) NOT NULL UNIQUE,
 	`user_role_description` VARCHAR(255) NOT NULL,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`))
+	`modified_at` DATETIME NULL DEFAULT NULL)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -121,10 +118,8 @@ DEFAULT CHARACTER SET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `ecommerce`.`user_role` (
 	`user_id` INT NOT NULL,
 	`user_role_id` INT NOT NULL,
-	`user_role_inserted_at` DATETIME NOT NULL,
+	`user_role_inserted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`user_role_updated_at` DATETIME NULL DEFAULT NULL,
-	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`user_id`, `user_role_id`),
 	INDEX `fk_user_roles_idx` (`user_role_id` ASC) VISIBLE,
 	CONSTRAINT `fk_user_roles_type`
@@ -137,21 +132,36 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table users
 CREATE TABLE IF NOT EXISTS `ecommerce`.`user` (
-	`id` INT NOT NULL AUTO_INCREMENT COMMENT 'username until 15 characters',
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_name` VARCHAR(50) NOT NULL,
 	`user_password` VARCHAR(255) NULL DEFAULT NULL,
-	`user_client_id` INT NOT NULL,
+	`client_id` INT NOT NULL UNIQUE,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `user_client_id`),
-	INDEX `fk_users_clients_idx` (`user_client_id` ASC) VISIBLE,
-	CONSTRAINT `fk_users_user_roles`
-		FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`user_role` (`user_id`)
-		ON DELETE NO ACTION
-		ON UPDATE NO ACTION,
+	UNIQUE KEY (`client_id`, `user_name`),
+	INDEX `fk_users_clients_idx` (`client_id` ASC) VISIBLE,
 	CONSTRAINT `fk_users_clients`
-		FOREIGN KEY (`user_client_id`)
+		FOREIGN KEY (`client_id`)
 		REFERENCES `ecommerce`.`clients` (`id`)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4;
+
+-- Creates table user_session
+CREATE TABLE IF NOT EXISTS `ecommerce`.`user_session` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`user_id` INT NOT NULL COMMENT 'user_id references the user_id field in the \'users\' table.',
+	`token` VARCHAR(255) NOT NULL COMMENT 'Authentication token associated with the session.',
+    `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`logout_time` DATETIME,
+    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+    `ip_address` VARCHAR(45),
+	PRIMARY KEY (`id`, `user_id`),
+	INDEX `fk_user_session_user_idx` (`user_id` ASC) VISIBLE,
+	CONSTRAINT `fk_user_session_user`
+		FOREIGN KEY (`user_id`)
+		REFERENCES `ecommerce`.`user` (`id`)
 		ON DELETE NO ACTION
 		ON UPDATE NO ACTION)
 ENGINE = InnoDB
@@ -159,29 +169,28 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table admin_role_type
 CREATE TABLE IF NOT EXISTS `ecommerce`.`admin_role_type` (
-	`admin_role_id` INT NOT NULL,
-	`admin_role_name` VARCHAR(50) NOT NULL,
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`admin_role_name` VARCHAR(50) NOT NULL UNIQUE,
 	`admin_roles_description` VARCHAR(255) NOT NULL,
 	`admin_permissions` VARCHAR(255) NOT NULL,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`admin_role_id`))
+	`modified_at` DATETIME NULL DEFAULT NULL)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table admin_role
 CREATE TABLE IF NOT EXISTS `ecommerce`.`admin_role` (
 	`admin_id` INT NOT NULL,
-	`id` INT NOT NULL,
-	`admin_role_inserted_at` DATETIME NOT NULL,
+	`admin_role_type` INT NOT NULL,
+	`admin_role_inserted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`admin_role_updated_at` DATETIME NULL DEFAULT NULL,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`admin_id`, `id`),
-	INDEX `fk_admin_role_admin_roles_idx` (`id` ASC) VISIBLE,
+	PRIMARY KEY (`admin_id`, `admin_role_type`),
+	INDEX `fk_admin_role_admin_roles_idx` (`admin_role_type` ASC) VISIBLE,
 	CONSTRAINT `fk_admin_role_admin_role_type`
-	FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`admin_role_type` (`admin_role_id`)
+	FOREIGN KEY (`admin_role_type`)
+		REFERENCES `ecommerce`.`admin_role_type` (`id`)
 		ON DELETE NO ACTION
 		ON UPDATE CASCADE)
 ENGINE = InnoDB
@@ -191,44 +200,35 @@ DEFAULT CHARACTER SET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `ecommerce`.`admin` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`employee_id` INT NOT NULL,
-	`username` VARCHAR(30) NOT NULL,
+	`username` VARCHAR(30) NOT NULL UNIQUE,
 	`password` VARCHAR(500) NULL DEFAULT NULL,
-	`admin_created_at` DATETIME NOT NULL,
+	`admin_created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`admin_created_by` INT NOT NULL COMMENT 'admin_created_by refers to employee_id',
 	`admin_modified_at` DATETIME NULL DEFAULT NULL,
 	`admin_modified_by` INT NULL DEFAULT NULL COMMENT 'admin_modified_by refers to employee_id',
-	PRIMARY KEY (`id`),
-	CONSTRAINT `fk_admin_admin_role`
-		FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`admin_role` (`admin_id`)
-		ON DELETE NO ACTION
-		ON UPDATE NO ACTION,
-	CONSTRAINT `fk_admin_user_session`
-		FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`user_session` (`user_id`)
-		ON DELETE NO ACTION
-		ON UPDATE NO ACTION,
+	PRIMARY KEY (`id`, `employee_id`),
 	CONSTRAINT `fk_employee_admin`
 		FOREIGN KEY (`employee_id`)
 		REFERENCES `ecommerce`.`employee` (`id`)
 		ON DELETE NO ACTION
-		ON UPDATE CASCADE)
+		ON UPDATE NO ACTION)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
--- Creates table user_session
-CREATE TABLE IF NOT EXISTS `ecommerce`.`user_session` (
-	`session_id` INT NOT NULL AUTO_INCREMENT,
-	`user_id` INT NOT NULL COMMENT 'user_id references the user_id field in the \'users\' table.',
+-- Creates table admin_session
+CREATE TABLE IF NOT EXISTS `ecommerce`.`admin_session` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`admin_id` INT NOT NULL COMMENT 'user_id references the user_id field in the \'users\' table.',
 	`token` VARCHAR(255) NOT NULL COMMENT 'Authentication token associated with the session.',
-	`expiration_time` DATETIME NOT NULL COMMENT ' Date and time when the session expires.',
-	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`session_id`, `user_id`),
-	INDEX `fk_user_session_user_idx` (`user_id` ASC) VISIBLE,
-	CONSTRAINT `fk_user_session_user`
-		FOREIGN KEY (`user_id`)
-		REFERENCES `ecommerce`.`user` (`id`)
+    `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`logout_time` DATETIME,
+    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+    `ip_address` VARCHAR(45),
+	PRIMARY KEY (`id`, `admin_id`),
+	INDEX `fk_admin_session_idx` (`admin_id` ASC) VISIBLE,
+	CONSTRAINT `fk_admin_session`
+		FOREIGN KEY (`admin_id`)
+		REFERENCES `ecommerce`.`admin` (`id`)
 		ON DELETE NO ACTION
 		ON UPDATE NO ACTION)
 ENGINE = InnoDB
@@ -276,18 +276,19 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table stock_movement
 CREATE TABLE IF NOT EXISTS `ecommerce`.`stock_movement` (
-	`id` INT NOT NULL AUTO_INCREMENT,
+	`id` INT AUTO_INCREMENT,
 	`stock_id` INT NOT NULL,
 	`supplier_id` INT NOT NULL COMMENT 'If it is internal transfer, between different location sites, the supplier_id must be the company itself and the purchase value must be kept.',
 	`movement_type` ENUM("Entry", "Exit", "Transfer") NOT NULL DEFAULT 'Entry',
-	`movement_date` DATETIME NOT NULL,
+	`movement_date` DATE NOT NULL,
 	`quantity` INT NOT NULL,
-	`value_per_unit` DECIMAL NOT NULL,
+	`value_per_unit` DECIMAL(10,2) NOT NULL,
 	`source_site_id` INT NULL DEFAULT NULL COMMENT 'source_site_id referst to sock_site_id,in case of stock transfer.',
 	`destination_site_id` INT NOT NULL COMMENT 'destination_site_id referst to sock_site_id, destination of the product.',
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `stock_id`, `supplier_id`, `destination_site_id`),
+    PRIMARY KEY (`id`),
+	UNIQUE KEY (`stock_id`, `supplier_id`, `movement_type`, `movement_date`, `quantity`, `value_per_unit`, `destination_site_id`),
 	INDEX `fk_stock_movement_stock_idx` (`stock_id` ASC) VISIBLE,
 	INDEX `fk_stock_movement_suppliers_idx` (`supplier_id` ASC) VISIBLE,
 	INDEX `fk_stock_movement_stock_site_idx` (`destination_site_id` ASC) VISIBLE,
@@ -361,22 +362,25 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`product_discount` (
 	`discount_valid` TINYINT NOT NULL COMMENT 'The discount is valid or not.',
 	`discount_valid_from` DATETIME NOT NULL,
 	`discount_valid_until` DATETIME NOT NULL,
-	`product_discount_percentage` DECIMAL(10,2) NOT NULL,
+	`discount_percentage` DECIMAL(2,2) NOT NULL COMMENT '0.0 to 1.0',
+    `discount_validated_by` INT,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	UNIQUE INDEX `discount_name_UNIQUE` (`discount_name` ASC) VISIBLE,
-	CONSTRAINT `fk_product_discount_product`
-		FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`product` (`discount_id`)
-		ON DELETE NO ACTION
-		ON UPDATE CASCADE)
+	CONSTRAINT `fk_discount_validated_by_employee`
+		FOREIGN KEY (`discount_validated_by`)
+        REFERENCES `ecommerce`.`employee` (`id`)
+        ON DELETE NO ACTION
+        ON UPDATE CASCADE,
+	CONSTRAINT `chk_discount_percentage`
+		CHECK (`discount_percentage` BETWEEN 0.00 AND 1.00))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
 -- Creates table product
 CREATE TABLE IF NOT EXISTS `ecommerce`.`product` (
-	`id` INT NOT NULL AUTO_INCREMENT,
+	`id` INT AUTO_INCREMENT,
 	`product_name` VARCHAR(50) NOT NULL,
 	`product_cart_description` VARCHAR(250) NULL DEFAULT NULL,
 	`product_short_description` VARCHAR(1000) NULL DEFAULT NULL,
@@ -385,28 +389,37 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`product` (
 	`product_image` VARCHAR(100) NULL DEFAULT NULL,
 	`category_id` INT NOT NULL,
 	`product_sku` VARCHAR(50) NULL DEFAULT NULL,
-	`product_unit_price` DECIMAL NOT NULL,
+	`product_unit_price` DECIMAL(10,2) NOT NULL,
 	`discount_id` INT NULL DEFAULT NULL,
 	`product_taxable` TINYINT NOT NULL DEFAULT 1,
 	`stock_id` INT NOT NULL,
-    `product_rating` FLOAT DEFAULT 0,
+    `product_rating` FLOAT DEFAULT 0 COMMENT '0 TO 5',
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `category_id`),
-	UNIQUE INDEX `product_name_UNIQUE` (`product_name` ASC) VISIBLE,
-	INDEX `fk_product_product_category_idx` (`category_id` ASC) VISIBLE,
-    INDEX `fk_product_product_discount_idx` (`discount_id` ASC) VISIBLE,
-    INDEX `fk_product_stock_idx` (`stock_id` ASC) VISIBLE,
-	CONSTRAINT `fk_product_product_category`
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX `product_name_idx` (`product_name` ASC) VISIBLE,
+	CONSTRAINT `fk_product_category`
 		FOREIGN KEY (`category_id`)
 		REFERENCES `ecommerce`.`product_category` (`id`)
 		ON DELETE NO ACTION
 		ON UPDATE CASCADE,
-	CONSTRAINT `fk_product_cart_item1`
+	CONSTRAINT `fk_discount_id`
+		FOREIGN KEY (`discount_id`)
+        REFERENCES `ecommerce`.`product_discount` (`id`)
+        ON DELETE NO ACTION
+        ON UPDATE CASCADE,
+	CONSTRAINT `fk_product_stock_id`
+		FOREIGN KEY (`stock_id`)
+        REFERENCES `ecommerce`.`stock` (`id`)
+        ON DELETE NO ACTION
+        ON UPDATE CASCADE,
+	CONSTRAINT `fk_product_cart_item`
 		FOREIGN KEY (`id`)
 		REFERENCES `ecommerce`.`cart_item` (`product_id`)
 		ON DELETE NO ACTION
-		ON UPDATE NO ACTION)
+		ON UPDATE NO ACTION,
+	CONSTRAINT `chk_product_rate`
+		CHECK (`product_rating` BETWEEN 0.00 AND 5.00))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -414,7 +427,7 @@ DEFAULT CHARACTER SET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `ecommerce`.`shopping_session` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`user_id` INT NOT NULL,
-	`total_amount` DECIMAL NOT NULL,
+	`total_amount` DECIMAL(10,2) NOT NULL,
 	`shopping_session_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
@@ -428,7 +441,7 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`shopping_session` (
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
--- Creates table
+-- Creates table cart_item
 CREATE TABLE IF NOT EXISTS `ecommerce`.`cart_item` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`shopping_session_id` INT NOT NULL,
@@ -436,7 +449,8 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`cart_item` (
 	`quantity` INT NOT NULL DEFAULT 1,
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `shopping_session_id`),
+	PRIMARY KEY (`id`),
+    UNIQUE INDEX `fk_cart_item_shopping_session` (shopping_session_id,  product_id ASC) VISIBLE,
 	INDEX `fk_cart_item_shopping_session_idx` (`shopping_session_id` ASC) VISIBLE,
     INDEX `fk_cart_item_product_idx` (`product_id` ASC) VISIBLE,
 	CONSTRAINT `fk_cart_item_shopping_session`
@@ -454,9 +468,8 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`order_items` (
 	`product_id` INT NOT NULL,
 	`created_at` DATETIME NULL DEFAULT NULL,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `order_id`, `product_id`),
-	INDEX `fk_order_items_order_details_idx` (`order_id` ASC) VISIBLE,
-	INDEX `fk_order_items_product_idx` (`product_id` ASC) VISIBLE,
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX `fk_order_items_order_details_idx` (`order_id`, `product_id` ASC) VISIBLE,
 	CONSTRAINT `fk_order_items_order_details`
 		FOREIGN KEY (`order_id`)
 		REFERENCES `ecommerce`.`order` (`id`)
@@ -466,7 +479,7 @@ CREATE TABLE IF NOT EXISTS `ecommerce`.`order_items` (
 		FOREIGN KEY (`product_id`)
 		REFERENCES `ecommerce`.`product` (`id`)
 		ON DELETE NO ACTION
-		ON UPDATE NO ACTION)
+		ON UPDATE CASCADE)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -474,17 +487,21 @@ DEFAULT CHARACTER SET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `ecommerce`.`order` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`user_id` INT NOT NULL,
-	`order_total_amount` DECIMAL NOT NULL,
+	`order_total_amount` DECIMAL(10,2) NOT NULL,
 	`payment_id` INT NOT NULL,
     `order_status` ENUM("Canceled", "Confirmed", "Processing", "Completed") NOT NULL DEFAULT 'Processing',
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `user_id`),
-	INDEX `fk_order_user_idx` (`user_id` ASC) VISIBLE,
-    INDEX `fk_order_payment_idx` (`payment_id` ASC) VISIBLE,
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX `fk_order_details` (`user_id`, `payment_id` ASC) VISIBLE,
 	CONSTRAINT `fk_order_details_user`
 	FOREIGN KEY (`user_id`)
 		REFERENCES `ecommerce`.`user` (`id`)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION,
+	CONSTRAINT `fk_order_payment`
+		FOREIGN KEY (`payment_id`)
+		REFERENCES `ecommerce`.`payment_details` (`id`)
 		ON DELETE NO ACTION
 		ON UPDATE NO ACTION)
 ENGINE = InnoDB
@@ -494,18 +511,13 @@ DEFAULT CHARACTER SET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `ecommerce`.`payment_details` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`order_id` INT NOT NULL,
-	`amount` DECIMAL NOT NULL,
+	`amount` DECIMAL(10,2) NOT NULL,
 	`payment_type` ENUM("Cash", "Credit Card", "Debit Card") NOT NULL DEFAULT 'Credit Card',
 	`status` ENUM("Approved","Declined") NOT NULL DEFAULT 'Declined',
 	`payment_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`modified_at` DATETIME NULL DEFAULT NULL,
-	PRIMARY KEY (`id`, `order_id`),
-	CONSTRAINT `fk_payment_details_order`
-		FOREIGN KEY (`id`)
-		REFERENCES `ecommerce`.`order` (`payment_id`)
-		ON DELETE NO ACTION
-		ON UPDATE NO ACTION)
+	PRIMARY KEY (`id`),
+    UNIQUE INDEX `fk_order_id` (`order_id` ASC) VISIBLE)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -519,7 +531,7 @@ CREATE TABLE IF NOT EXISTS `eCommerce`.`credit_card_payment` (
   `expiration_month` INT NOT NULL,
   `expiration_year` INT NOT NULL,
   `cvv` VARCHAR(4) NOT NULL,
-  `payment_date` DATE NOT NULL,
+  `payment_date` DATETIME NOT NULL,
   `payment_amount` DECIMAL(10, 2) NOT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
